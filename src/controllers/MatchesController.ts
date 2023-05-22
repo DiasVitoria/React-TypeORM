@@ -8,24 +8,31 @@ class MatchesController {
   public async listMatches(req: Request, res: Response): Promise<Response> {
     const { limit, offset } = req.body
 
-    try{
-      const matches: any[] = await AppDataSource.getRepository(Matches).find({ skip: offset, take: limit, order: { date: 'DESC' } })
+    try {
+      const matches: any[] = await AppDataSource.getRepository(Matches).find({ skip: offset, take: limit, order: { date: 'DESC' }, relations: { host: true, visitor: true } })
 
       return res.status(200).json(matches)
-    }catch(e){
+    } catch (e) {
       return res.status(500).json(e.message)
-    }  
+    }
   }
 
   public async listById(req: Request, res: Response): Promise<Response> {
     const { id } = req.params
 
-    try{
+    try {
       const idAsNumber: number = parseInt(id)
-      const matches = await AppDataSource.getRepository(Matches).find({ where: { host: { id: idAsNumber }, visitor: { id: idAsNumber} }, order: { date: 'DESC' } })
+      const team = await AppDataSource.getRepository(Teams).findOneBy({id: idAsNumber})
+      const matches = await AppDataSource.getRepository(Matches).find({
+        relations: { host: true, visitor: true },
+        where:
+          [{ host: team },
+          { visitor: team }],
+        order: { date: 'DESC' }
+      })
 
       return res.status(200).json(matches)
-    }catch(e){
+    } catch (e) {
       return res.status(500).json(e.message)
     }
   }
@@ -33,29 +40,29 @@ class MatchesController {
   public async create(req: Request, res: Response): Promise<Response> {
     const { idhost, idvisitor, date } = req.body
 
-    try{
+    try {
       const idHost: number = parseInt(idhost)
       const idVisitor: number = parseInt(idvisitor)
 
       const host = await AppDataSource.getRepository(Teams).findOneBy({ id: idHost })
 
-      if(!host) return res.status(404).json('Mandante desconhecido')
+      if (!host) return res.status(404).json('Mandante desconhecido')
 
       const visitor = await AppDataSource.getRepository(Teams).findOneBy({ id: idVisitor })
 
-      if(!visitor) return res.status(404).json('Visitante desconhecido')
+      if (!visitor) return res.status(404).json('Visitante desconhecido')
 
       let match: Matches;
 
-      if(date){
+      if (date) {
         const dateAsDate: Date = new Date(date)
         match = await AppDataSource.getRepository(Matches).save({ host: host, visitor: visitor, date: dateAsDate })
-      }else{
+      } else {
         match = await AppDataSource.getRepository(Matches).save({ host: host, visitor: visitor })
       }
 
-        return res.status(200).json(match)
-    }catch(e){
+      return res.status(200).json(match)
+    } catch (e) {
       return res.status(500).json(e.message)
     }
   }
@@ -63,25 +70,25 @@ class MatchesController {
   public async update(req: Request, res: Response): Promise<Response> {
     const { id, idhost, idvisitor, date } = req.body
 
-    try{
+    try {
       const match = await AppDataSource.getRepository(Matches).findOneBy({ id })
 
-      if(!match) return res.status(404).json('Partida não encontrada')
+      if (!match) return res.status(404).json('Partida não encontrada')
 
       const idHost: number = parseInt(idhost)
       const idVisitor: number = parseInt(idvisitor)
 
       const host = await AppDataSource.getRepository(Teams).findOneBy({ id: idHost })
 
-      if(!host) return res.status(404).json('Mandante desconhecido')
+      if (!host) return res.status(404).json('Mandante desconhecido')
 
       const visitor = await AppDataSource.getRepository(Teams).findOneBy({ id: idVisitor })
 
-      if(!visitor) return res.status(404).json('Visitante desconhecido')
+      if (!visitor) return res.status(404).json('Visitante desconhecido')
 
       match.host = host
       match.visitor = visitor
-      if(date){
+      if (date) {
         const dateAsDate: Date = new Date(date)
         match.date = dateAsDate
       }
@@ -89,7 +96,7 @@ class MatchesController {
       const updatedMatch = await AppDataSource.getRepository(Matches).save(match)
 
       return res.status(200).json(updatedMatch)
-    }catch(e){
+    } catch (e) {
       return res.status(500).json(e.message)
     }
   }
@@ -97,15 +104,15 @@ class MatchesController {
   public async delete(req: Request, res: Response): Promise<Response> {
     const { id } = req.body
 
-    try{
+    try {
       const match = await AppDataSource.getRepository(Matches).findOneBy({ id })
 
-      if(!match) return res.status(404).json('Partida não encontrada')
+      if (!match) return res.status(404).json('Partida não encontrada')
 
       await AppDataSource.getRepository(Matches).delete(match)
 
       return res.status(200).json(`Partida ${match.id} deletada!`)
-    }catch(e){
+    } catch (e) {
       return res.status(500).json(e.message)
     }
   }
