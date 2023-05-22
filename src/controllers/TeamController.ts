@@ -1,61 +1,87 @@
-import { Request, Response } from "express";
 import AppDataSource from "../data-source";
+import { Request, Response } from 'express';
 import { Teams } from "../entities/Teams";
 
 class TeamController {
-    repository = AppDataSource.getRepository(Teams)
 
-    public async ListTeams(req: Request,res: Response):Promise<Response>{
-        try{
-            const teams: any[] = await this.repository.find({order: {name: 'ASC'}})
+  public async listTeam(req: Request, res: Response): Promise<Response> {
 
-            return res.status(200).json(teams)
-        }catch(e) {
-            res.status(500).json(e.message)
-        }
+    try{
+      const teams: any[] = await AppDataSource.getRepository(Teams).find({ order: { name: 'ASC' } })
+
+      return res.status(200).json(teams)
+    }catch(e){
+      return res.status(500).json(e.message)
+    }  
+  }
+
+  public async listByTermo(req: Request, res: Response): Promise<Response> {
+    const { termo } = req.params
+
+    try{
+      const teams = await AppDataSource.getRepository(Teams).find({ order: { name: 'ASC' } })
+
+      const teamsWithTermo = teams.filter(x=> x.name.toLowerCase().includes(termo.toLowerCase()))
+
+      return res.status(200).json(teamsWithTermo)
+    }catch(e){
+      return res.status(500).json(e.message)
     }
+  }
 
-    public async ListByTermo(req: Request,res: Response):Promise<Response>{
-        const { termo } = req.params
+  public async create(req: Request, res: Response): Promise<Response> {
+    const { name } = req.body
 
-        try{
-            const teams = await this.repository.find({order: {name: 'ASC'}})
+    try{
+      const team = await AppDataSource.getRepository(Teams).save({ name })
 
-            const teamsWithTermo = teams.filter(r => r.name.toUpperCase().includes(termo.toUpperCase()))
-
-            return res.status(200).json(teamsWithTermo)
-        }catch(e) {
-            res.status(500).json(e.message)
-        }
+        return res.status(200).json(team)
+    }catch(e){
+      let errorMessage = e.message
+      if(errorMessage.includes("UNIQUE constraint")){
+        errorMessage = "O nome já existe."
+      }
+      return res.status(500).json(errorMessage)
     }
+  }
 
-    
-    public async Create(req: Request,res: Response):Promise<Response>{
-        const { name } = req.body
+  public async update(req: Request, res: Response): Promise<Response> {
+    const { id, name } = req.body
 
-        try{
-            const team = await this.repository.save({ name })
+    try{
+      const team = await AppDataSource.getRepository(Teams).findOneBy({ id })
 
+      if(!team) return res.status(404).json('Time não encontrado')
 
-            return res.status(200).json(team)
-        }catch(e) {
-            res.status(500).json(e.message)
-        }
+      team.name = name
+
+      const updatedTeam = await AppDataSource.getRepository(Teams).save(team)
+
+      return res.status(200).json(updatedTeam)
+    }catch(e){
+      let errorMessage = e.message
+      if(errorMessage.includes("UNIQUE constraint")){
+        errorMessage = "O nome já existe."
+      }
+      return res.status(500).json(errorMessage)
     }
+  }
 
-    
-    public async Update(req: Request,res: Response):Promise<Response>{
-        const { name } = req.body
+  public async delete(req: Request, res: Response): Promise<Response> {
+    const { id } = req.body
 
-        try{
-            const team = await this.repository.save({ name })
+    try{
+      const team = await AppDataSource.getRepository(Teams).findOneBy({ id })
 
+      if(!team) return res.status(404).json('Time não encontrado')
 
-            return res.status(200).json(team)
-        }catch(e) {
-            res.status(500).json(e.message)
-        }
+      await AppDataSource.getRepository(Teams).delete(team)
+
+      return res.status(200).json(`Time ${team.name} deletado!`)
+    }catch(e){
+      return res.status(500).json(e.message)
     }
+  }
 }
 
-
+export default new TeamController();

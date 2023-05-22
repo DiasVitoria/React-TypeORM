@@ -1,12 +1,12 @@
 import { Router, Request, Response } from "express";
-import spent from './spent';
-import UserController from "../controllers/UserController";
+import team from "./team"
+import match from './matchs'
 
-const routes = Router();
+const routes = Router()
 
-routes.post("/login", UserController.login);
+routes.use("/team", team);
+routes.use("/match", match)
 
-//aceita qualquer método HTTP ou URL
-routes.use( (req:Request,res:Response) => res.json({error:"Requisição desconhecida"}) );
+routes.use((req: Request, res: Response) => res.json({ error: "Requisição desconhecida" }));
 
 export default routes;
